@@ -1,11 +1,11 @@
 #!/usr/sbin/dtrace -s
 
 #pragma D option quiet
+#pragma D option defaultargs
 #pragma D option switchrate=10
 
 dtrace:::BEGIN 
 {
-  err[0] = "";
   err[0] = "";
   err[EPERM] = "EPERM";
   err[ENOENT] = "ENOENT";

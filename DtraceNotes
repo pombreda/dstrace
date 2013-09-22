@@ -1,0 +1,125 @@
+DTrace Notes
+============
+
+Contents
+-------------------------------------------------------------------------------
+Available in
+Probes
+References
+
+A. Available in
+-------------------------------------------------------------------------------
+  - Solaris 10 releases
+  - OpenSolaris, 
+  - Mac OS X beginning with release 10.5 (Leopard)
+  - FreeBSD beginning with release 7.1 
+
+
+
+B. Probes
+-------------------------------------------------------------------------------
+dtrace -l -- list probes
+dtrace -l -n syscall:::entry -- print all syscall entry probes
+
+Syntax:
+provider:module:function:name
+/predicate/
+{
+   action;
+}
+
+Examples:
+dtrace:::BEGIN  -- fires when dtrace starts
+
+Providers:
+dtrace -- BEGIN, END, and ERROR probes.
+syscall -- Provides entry and return probes for every system call. These calls
+are documented in section 2 of the man database. arg0, arg1... are parameters to
+the system call in the entry probe. arg0 is the return value in the return
+probe.
+
+Arguments:
+Arguments to probes can take two different formats. The args[x] format is typed
+based upon the individual probe while argx is always a 64-bit int. Pointers are
+relative to the application address space and are not valid locally unless
+explicitly translated with a function like copyin().
+
+Probe variables
+pid   PID of firing process
+ppid  PPID of firing process
+errno   The last errno encountered by the firing process
+execname  Name of the process firing the probe
+probeprov   The provider of the firing probe
+probemod  The module name of the firing probe
+probefunc   The function name of the firing probe
+probename   The name of the firing probe
+arg0 ... argX   64 bit integer value returned from a probe
+args[0] ... args[X]   Typed value returned from a probe
+
+The key difference between arg0 and args[0] is that arg0 is always the same type
+(64 bit int) while args[0] typically refers to a struct that will vary based
+upon the firing probe. The 64 bit int of arg0 may be an integer or a pointer
+depending upon the probe that fires. The definitions of the providers, and
+specific probes will define which of these to use, and what data to expect
+inside.
+
+DTrace variables (macros):
+Macros are variables that are relative to the dtrace process (script) and not
+the probe or other variable values.
+
+$pid  Process ID of the dtrace process
+$ppid   Parent process ID of the dtrace process
+$cwd  Current working directory of the dtrace process
+$0  If called from a script $0 is the script name
+$1 ... $9   Command line arguments to the dtrace script
+$target   This will resolve to a PID of a process using the -p or -c switch
+$[e](g/u)id   Effective and real user and group IDs
+
+macros can be explicitly cast to a string by preceding it with double "$"
+characters. For example if $1 is the value 123: $1 will be an integer 123 $$1
+will be the string "123"
+
+Thread and clause local variables
+Thread local variables are variables that are local for the firing probe. In the
+following example, the thread local variable insures that we are always
+referring to the same read() call instead of another process' entry:
+
+syscall::read:entry
+{
+   self->stime = timestamp;
+}
+
+syscall::read:return
+/self->stime != 0/
+{
+   printf("%s read() %d nsecs\n",
+          execname,
+          timestamp - self->stime);
+}
+
+Clause local variables are local to a clause (block) and are denoted with the
+this-> prefix.
+
+Constants:
+inline int MAX_VALUE = 10;
+
+
+
+
+C. Commands
+-------------------------------------------------------------------------------
+exit(0);
+printf        -- print format
+copyin        -- copy bytes from pointer eg copyin(p, 1)
+timestamp     -- holds the time in nanosecs
+walltimestamp -- 
+copyinstr     -- copy to string
+
+
+
+
+References
+-------------------------------------------------------------------------------
+http://www.tablespace.net/quicksheet/dtrace-quickstart.html
+http://docs.oracle.com/cd/E19253-01/819-5488/819-5488.pdf
+http://pollywog.com/paul.echeverri/portfolio/dtrcug/p4.html
